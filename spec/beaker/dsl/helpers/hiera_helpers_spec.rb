@@ -52,6 +52,41 @@ describe ClassMixedWithDSLHelpers do
 
   end
 
+  describe "#clear_temp_hieradata" do
+    before(:each) do
+      subject.instance_variable_set(:@temp_hieradata_dirs, [Dir.mktmpdir('hieradata')])
+    end
+
+    it "removes all temporary hiera data directories" do
+      temp_hieradata_dirs = subject.instance_variable_get(:@temp_hieradata_dirs)
+
+      expect( File.exist?(temp_hieradata_dirs.first) ).to be true
+      subject.clear_temp_hieradata
+      expect( File.exist?(temp_hieradata_dirs.first) ).to be false
+    end
+
+    it "does not fail if there are no temporary hiera data directories" do
+      expect {
+        subject.clear_temp_hieradata
+      }.not_to raise_error
+    end
+  end
+
+  describe "#set_hieradata_on" do
+    let(:hierarchy) { [ 'nodes/%{::fqdn}', 'common' ] }
+    let(:path) { 'spec/fixtures/hieradata' }
+
+    before(:each) do
+      subject.instance_variable_set(:@temp_hieradata_dirs, [Dir.mktmpdir('hieradata')])
+    end
+
+    it "writes a hiera structure to the remote host" do
+      host = make_host('testhost', { :platform => 'ubuntu' } )
+      expect(subject).to receive(:copy_hiera_data_to).with(host, subject.instance_variable_get(:@temp_hieradata_dirs))
+      expect(subject).to receive(:write_hiera_config).with(hierarchy)
+    end
+  end
+
   describe "#copy_hiera_data_to" do
     let(:path) { 'spec/fixtures/hieradata' }
     it 'on FOSS host' do
